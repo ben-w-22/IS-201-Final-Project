@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Codebreaker Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #0f2027, #2c5364 70%);
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .game-container {
+      background: rgba(255,255,255,0.07);
+      border-radius: 20px;
+      box-shadow: 0 8px 36px rgba(0,0,0,0.5);
+      padding: 32px 24px 28px 24px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      backdrop-filter: blur(3px);
+    }
+    h1 {
+      font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: 2px;
+      color: #ffe082;
+      margin-bottom: 12px;
+      font-size: 2.1em;
+      text-shadow: 0 2px 10px #0008;
+    }
+    .instructions {
+      font-size: 1em;
+      color: #b3e5fc;
+      margin-bottom: 20px;
+    }
+    .guess-form {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+    .guess-form input[type="text"] {
+      width: 90px;
+      padding: 8px;
+      font-size: 1.2em;
+      border-radius: 7px;
+      border: none;
+      background: #eceff1;
+      color: #263238;
+      letter-spacing: 5px;
+      text-align: center;
+      outline: none;
+      box-shadow: 0 1px 4px #0002;
+      transition: box-shadow 0.2s;
+    }
+    .guess-form input[type="text"]:focus {
+      box-shadow: 0 2px 10px #ffe08288;
+    }
+    .guess-form button {
+      background: linear-gradient(90deg, #ffe082, #ffd54f);
+      color: #263238;
+      font-weight: bold;
+      border: none;
+      border-radius: 7px;
+      font-size: 1.1em;
+      padding: 8px 20px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #0003;
+      transition: background 0.2s, color 0.2s;
+    }
+    .guess-form button:hover {
+      background: linear-gradient(90deg, #ffd54f, #ffe082);
+      color: #212121;
+    }
+    .history {
+      margin-top: 18px;
+      text-align: left;
+      max-height: 190px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .history-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.1em;
+      background: rgba(255,255,255,0.06);
+      margin-bottom: 7px;
+      border-radius: 7px;
+      padding: 6px 10px;
+      box-shadow: 0 1px 4px #0001;
+    }
+    .feedback {
+      font-size: 1.3em;
+      letter-spacing: 3px;
+    }
+    .success {
+      color: #00e676;
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-top: 18px;
+      text-shadow: 0 1px 8px #fff4;
+    }
+    .restart-btn {
+      margin-top: 18px;
+      background: linear-gradient(90deg, #b3e5fc, #4fc3f7);
+      color: #263238;
+      border: none;
+      border-radius: 7px;
+      font-size: 1.05em;
+      padding: 8px 22px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #0002;
+      transition: background 0.2s, color 0.2s;
+    }
+    .restart-btn:hover {
+      background: linear-gradient(90deg, #4fc3f7, #b3e5fc);
+      color: #01579b;
+    }
+    @media (max-width: 480px) {
+      .game-container {
+        padding: 16px 2vw 14px 2vw;
+        max-width: 99vw;
+      }
+      .history-entry {
+        font-size: 1em;
+        padding: 4px 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Codebreaker</h1>
+    <div class="instructions">
+        <button onclick="window.location.href='index.html'">Résumé</button>
+        <button onclick="window.location.href='realscratch.html'">Scratch</button>
+        <br><br>
+      Guess the 4-digit code.<br>
+      🟢 Correct digit &amp; place<br>
+      🟡 Correct digit, wrong place<br>
+      ⚪ Wrong digit<br>
+      <span style="font-size:0.95em;color:#ffe082;">(Digits may repeat!)</span>
+    </div>
+    <form class="guess-form" autocomplete="off">
+      <input type="text" maxlength="4" pattern="\d{4}" required placeholder="0000" id="guessInput" autofocus>
+      <button type="submit">Guess</button>
+    </form>
+    <div class="history" id="history"></div>
+    <div class="success" id="successMsg" style="display:none;"></div>
+    <button class="restart-btn" id="restartBtn" style="display:none;">Restart</button>
+  </div>
+  <script>
+    let code = '';
+    let gameOver = false;
+
+    function generateCode() {
+      let c = '';
+      for(let i=0; i<4; i++) c += Math.floor(Math.random()*10);
+      return c;
+    }
+
+    function feedback(guess, code) {
+      let codeArr = code.split('');
+      let guessArr = guess.split('');
+      let feedbackArr = Array(4).fill(''); // 🟢🟡⚪
+
+      // First pass: correct digit and place
+      for(let i=0; i<4; i++) {
+        if(guessArr[i] === codeArr[i]) {
+          feedbackArr[i] = '🟢';
+          codeArr[i] = null; // Mark as used
+          guessArr[i] = null;
+        }
+      }
+      // Second pass: correct digit, wrong place
+      for(let i=0; i<4; i++) {
+        if(guessArr[i] !== null) {
+          let idx = codeArr.indexOf(guessArr[i]);
+          if(idx !== -1) {
+            feedbackArr[i] = '🟡';
+            codeArr[idx] = null;
+            guessArr[i] = null;
+          }
+        }
+      }
+      // Third pass: wrong digit
+      for(let i=0; i<4; i++) {
+        if(feedbackArr[i] === '') feedbackArr[i] = '⚪';
+      }
+      return feedbackArr.join('');
+    }
+
+    function addHistory(guess, fb) {
+      const history = document.getElementById('history');
+      const entry = document.createElement('div');
+      entry.className = 'history-entry';
+      entry.innerHTML = `<span>${guess}</span><span class="feedback">${fb}</span>`;
+      history.insertBefore(entry, history.firstChild);
+    }
+
+    function resetGame() {
+      code = generateCode();
+      gameOver = false;
+      document.getElementById('history').innerHTML = '';
+      document.getElementById('successMsg').style.display = 'none';
+      document.getElementById('restartBtn').style.display = 'none';
+      document.getElementById('guessInput').value = '';
+      document.getElementById('guessInput').disabled = false;
+      document.querySelector('.guess-form button').disabled = false;
+      // console.log('Secret code:', code); // Uncomment for debugging!
+    }
+
+    document.querySelector('.guess-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if(gameOver) return;
+      const input = document.getElementById('guessInput');
+      let guess = input.value.trim();
+      if(!/^\d{4}$/.test(guess)) {
+        input.value = '';
+        input.placeholder = "4 digits!";
+        input.classList.add('shake');
+        setTimeout(()=>input.classList.remove('shake'), 400);
+        return;
+      }
+      const fb = feedback(guess, code);
+      addHistory(guess, fb);
+      if(fb === '🟢🟢🟢🟢') {
+        document.getElementById('successMsg').textContent = `🎉 You broke the code! The code was ${code}.`;
+        document.getElementById('successMsg').style.display = 'block';
+        document.getElementById('restartBtn').style.display = 'inline-block';
+        input.disabled = true;
+        document.querySelector('.guess-form button').disabled = true;
+        gameOver = true;
+      }
+      input.value = '';
+      input.focus();
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+    // Optional: shake animation for invalid input
+    const style = document.createElement('style');
+    style.textContent = `
+      .shake { animation: shake 0.35s; }
+      @keyframes shake {
+        0% { transform: translateX(0); }
+        20% { transform: translateX(-6px); }
+        40% { transform: translateX(6px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+        100% { transform: translateX(0); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Start the game!
+    resetGame();
+  </script>
+</body>
+</html>
